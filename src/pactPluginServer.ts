@@ -22,8 +22,8 @@ import {
   VerifyInteractionResponse,
   Empty
 } from "./plugin_inlined.d.ts";
-
-import {protoFile} from './pluginProtoUint8Array.ts'
+import { getAvailablePort } from "https://deno.land/x/port/mod.ts";
+import { protoFile } from "./pluginProtoUint8Array.ts";
 
 const server = new GrpcServer();
 
@@ -151,15 +151,19 @@ const PactPluginService: PactPlugin = {
   }
 };
 
-server.addService<PactPlugin>(new TextDecoder().decode(protoFile), { ...PactPluginService });
+server.addService<PactPlugin>(new TextDecoder().decode(protoFile), {
+  ...PactPluginService
+});
 
-const main = async (port = 50052) => {
+const main = async () => {
   console.log(`Deno Pact Plugin`);
+  const port: number = Deno.env.get("PORT")
+    ? Number(Deno.env.get("PORT"))
+    : (await getAvailablePort()) ?? 50052;
   console.log(JSON.stringify({ port, serverKey: crypto.randomUUID() }));
   for await (const conn of Deno.listen({ port })) {
     server.handle(conn);
   }
 };
 
-await main(50052);
-
+await main();

@@ -43,7 +43,7 @@ run:
 	deno run --allow-all --unstable src/pactPluginServer.ts
 
 test:
-	{ make run & }; \
+	{ export PORT=50052 && make run & }; \
 	pid=$$!; \
 	sleep 3; \
 	deno run --allow-all --unstable test/sendPactPluginClientReqs.ts; \
@@ -52,7 +52,7 @@ test:
 	exit $$r
 
 test_binary:
-	{ dist/${PLATFORM}/${ARCH}/pactPluginServer & }; \
+	{  export PORT=50052 && dist/${PLATFORM}/${ARCH}/pactPluginServer & }; \
 	pid=$$!; \
 	sleep 3; \
 	deno run --allow-all --unstable test/sendPactPluginClientReqs.ts; \
