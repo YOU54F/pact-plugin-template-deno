@@ -1,0 +1,3 @@
+dist
+*.gz
+.DS_Store

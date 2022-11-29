@@ -1,0 +1,144 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      release_level:
+        description: 'version of release to bump'
+        required: true
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+env:
+  PLUGIN_NAME: deno-template
+
+jobs:
+  test:
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+        with: # Ensure we get tags too
+          fetch-depth: 0
+
+      - if: runner.os == 'Windows'
+        run: rm 'C:\Windows\System32\bash.exe'
+
+
+# Setup - Protoc as plugin uses gRPC for communication
+
+      - if: runner.os == 'macOS'
+        run: brew install protobuf
+      - if: runner.os == 'Windows'
+        name: Choco install protoc
+        uses: crazy-max/ghaction-chocolatey@v2
+        with:
+          args: install protoc
+
+# Setup - Deno
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+# Build & Test Stuff
+
+      - run: make detect_os
+      - run: deno lint
+      - run: make test
+      - run: make compile
+      - run: make test_binary
+
+# Packaging stuff
+
+      - run: make prepare_mac_aarch64
+        if: runner.os == 'macOS'
+      - name: Prepare Artifacts
+        run: make prepare
+
+      - name: Upload Artifacts - windows-x86_64
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pact-${{ env.PLUGIN_NAME }}-plugin-windows-x86_64.gz
+          path: dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-windows-x86_64.gz
+      - name: Upload Artifacts - linux-x86_64
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pact-${{ env.PLUGIN_NAME }}-plugin-linux-x86_64.gz
+          path: dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-linux-x86_64.gz
+      - name: Upload Artifacts - osx-aarch64
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pact-${{ env.PLUGIN_NAME }}-plugin-osx-aarch64.gz
+          path: dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-osx-aarch64.gz
+      - name: Upload Artifacts - osx-x86_64
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pact-${{ env.PLUGIN_NAME }}-plugin-osx-x86_64.gz
+          path: dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-osx-x86_64.gz
+      - name: Upload Artifacts - Manifest
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pact-plugin.json
+          path: dist/release/pact-plugin.json
+
+# Release stuff 
+
+      - name: set version
+        run: |
+          echo "PLUGIN_VERSION=$(./script/bump.sh -p 'v-' -l)-$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
+          echo "DRAFT=true" >> $GITHUB_ENV
+      - name: set release level
+        # if:  ${{ github.event.inputs.release_level }} && github.ref == 'refs/heads/main'
+        if:  github.ref == 'refs/heads/prep' && github.event.inputs.release_level
+        run: |
+          ./script/bump.sh -p v- ${{ github.event.inputs.release_level }}
+          echo "PLUGIN_VERSION=$(./script/bump.sh -p v- -l)" >> $GITHUB_ENV
+          echo "DRAFT=false" >> $GITHUB_ENV
+      - name: Release Windows
+        uses: softprops/action-gh-release@v1
+        if: runner.os == 'Windows'
+        with:
+          files: |
+            dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-windows-x86_64.gz
+          prerelease: ${{ env.DRAFT }}
+          tag_name: v-${{ env.PLUGIN_VERSION }}
+          name: ${{ env.PLUGIN_VERSION }}
+          target_commitish: ${{ github.sha }}
+      - name: Release Linux
+        uses: softprops/action-gh-release@v1
+        if: runner.os == 'Linux'
+        with:
+          files: |
+            dist/release/pact-plugin.json
+            dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-linux-x86_64.gz
+          prerelease: ${{ env.DRAFT }}
+          tag_name: v-${{ env.PLUGIN_VERSION }}
+          name: ${{ env.PLUGIN_VERSION }}
+          target_commitish: ${{ github.sha }}
+      - name: Release macOS
+        uses: softprops/action-gh-release@v1
+        if: runner.os == 'macOS'
+        with:
+          files: |
+            dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-osx-x86_64.gz
+            dist/release/pact-${{ env.PLUGIN_NAME }}-plugin-osx-aarch64.gz
+          prerelease: ${{ env.DRAFT }}
+          tag_name: v-${{ env.PLUGIN_VERSION }}
+          name: ${{ env.PLUGIN_VERSION }}
+          target_commitish: ${{ github.sha }}
