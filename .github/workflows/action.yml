@@ -104,8 +104,7 @@ jobs:
           echo "PLUGIN_VERSION=$(./script/bump.sh -p 'v-' -l)-$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
           echo "DRAFT=true" >> $GITHUB_ENV
       - name: set release level
-        # if:  ${{ github.event.inputs.release_level }} && github.ref == 'refs/heads/main'
-        if:  github.ref == 'refs/heads/prep' && github.event.inputs.release_level
+        if:  github.ref == 'refs/heads/main' && github.event.inputs.release_level
         run: |
           ./script/bump.sh -p v- ${{ github.event.inputs.release_level }}
           echo "PLUGIN_VERSION=$(./script/bump.sh -p v- -l)" >> $GITHUB_ENV
