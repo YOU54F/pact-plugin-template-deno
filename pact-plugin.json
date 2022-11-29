@@ -1,0 +1,16 @@
+{
+  "pluginInterfaceVersion": 1,
+  "name": "deno-template",
+  "version": "0.0.0",
+  "executableType": "exec",
+  "minimumRequiredVersion": null,
+  "entryPoint": "pactPluginServer",
+  "entryPoints": {},
+  "args": null,
+  "dependencies": null,
+  "pluginConfig": {
+    "hostToBindTo": "127.0.0.1",
+    "protocVersion": "3.19.1",
+    "downloadUrl": "https://github.com/protocolbuffers/protobuf/releases/download"
+  }
+}
