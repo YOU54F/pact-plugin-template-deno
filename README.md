@@ -1,5 +1,7 @@
 # Pact Deno Plugin Template
 
+🚧 - Please note this is still under active development and does not currently work e2e! Busy building some others and will come back to it. In the mean time visit 👉 https://docs.pact.io/plugins for some working templates 👌
+
 A starter template for building a [Pact Plugin](https://github.com/pact-foundation/pact-plugins#plugins) 
 
 - written in TypeScript 
